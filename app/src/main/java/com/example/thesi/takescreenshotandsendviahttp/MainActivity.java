@@ -196,6 +196,19 @@ public class MainActivity extends AppCompatActivity {
 
 
         setIpAndPort();
+        try {
+        Socket= new Socket(IP,PORT);
+        printWriter= new PrintWriter(Socket.getOutputStream());
+        message=imageFile.getAbsoluteFile().toString();
+
+        printWriter.write(message);
+        printWriter.flush();
+        printWriter.close();
+        Socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        /*
         Socket sock = null;
         try {
             sock = new Socket(IP, PORT);
@@ -243,7 +256,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException e) {
             ResponseFromRequestTextView.setText(e.toString());
             e.printStackTrace();
-        }
+        }*/
 
 
 
