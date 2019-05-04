@@ -1,7 +1,6 @@
 package com.example.thesi.takescreenshotandsendviahttp;
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -10,6 +9,7 @@ import android.os.AsyncTask;
 import android.os.Environment;
 import android.os.Handler;
 import android.support.annotation.NonNull;
+import android.support.design.widget.TextInputEditText;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -19,14 +19,16 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
-import java.io.BufferedReader;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Date;
 
@@ -35,15 +37,19 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     TextView ResponseFromRequestTextView;
     Button startThreadButton,sendButton;
+    TextInputEditText TextInputEditTextIP,TextInputEditTextPORT;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         final Button screenshotButton = (Button) findViewById(R.id.ScreenshotButton);
         startThreadButton = (Button) findViewById(R.id.StartThreadButton);
         sendButton = (Button) findViewById(R.id.SendButton);
         ResponseFromRequestTextView = (TextView) findViewById(R.id.ResponseFromRequestTextView);
+        TextInputEditTextIP=(TextInputEditText)findViewById(R.id.TextInputEditTextIP);
+        TextInputEditTextPORT=(TextInputEditText)findViewById(R.id.TextInputEditTextPORT);
 
         VerifyPermissions();
 
@@ -56,9 +62,8 @@ public class MainActivity extends AppCompatActivity {
         startThreadButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                ExampleBackgroundThread thread = new ExampleBackgroundThread(10);
-                thread.start();
-                //SleepMainThread(10);
+                BackgroundThread backgroundThread = new BackgroundThread(10);
+                backgroundThread.start();
             }
         });
         sendButton.setOnClickListener(new View.OnClickListener() {
@@ -78,22 +83,31 @@ public class MainActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(MainActivity.this,permissions,1);
         }
     }
+    private void setIpAndPort(){
+        IP=TextInputEditTextIP.getText().toString();
+        PORT=Integer.parseInt(TextInputEditTextPORT.getText().toString());
+    }
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         VerifyPermissions();
     }
-    class ExampleBackgroundThread extends Thread {
+    class BackgroundThread extends Thread {
         int seconds;
-        ExampleBackgroundThread(int seconds) {
+        BackgroundThread(int seconds) {
             this.seconds = seconds;
         }
         @Override
         public void run() {
+            Log.d(TAG, "startBackgroundThread");
             for (int i = 0; i < seconds; i++) {
-                Log.d(TAG, "startThread and take Screenshot: " + i);
                 try {
                     Thread.sleep(1000);
+
+                    Log.d(TAG, "Take Screenshot: " + i);
                     takeScreenshot();
+
+                    Log.d(TAG, "Send Screenshot: " + i);
+                    sendScreenshot();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -101,6 +115,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     File imageFile;
+    private String ScreenshotFilePath;
     private void takeScreenshot() {
         try {
             View view = getWindow().getDecorView().getRootView();
@@ -108,10 +123,9 @@ public class MainActivity extends AppCompatActivity {
             Bitmap bitmap = Bitmap.createBitmap(view.getDrawingCache());
             view.setDrawingCacheEnabled(false);
             imageFile = SaveBitmapReturnFile(bitmap);
-            String url = "";
-            //sendScreenshot(url,mScreenFilePath);
             if(imageFile!=null){
-               // openScreenshot(imageFile);
+               //openScreenshot(imageFile);
+                //sendScreenshot();
             }
         } catch (Throwable e) {
             e.printStackTrace();
@@ -121,8 +135,8 @@ public class MainActivity extends AppCompatActivity {
         Date now = new Date();
         android.text.format.DateFormat.format("yyyy-MM-dd_hh:mm:ss", now);
         try {
-            String mScreenFilePath = Environment.getExternalStorageDirectory().toString() + "/" + now + ".jpg";
-            File imageFile = new File(mScreenFilePath);
+            ScreenshotFilePath = Environment.getExternalStorageDirectory().toString() + "/" + now + ".jpg";
+            File imageFile = new File(ScreenshotFilePath);
             FileOutputStream outputStream = new FileOutputStream(imageFile);
             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
             outputStream.flush();
@@ -133,18 +147,41 @@ public class MainActivity extends AppCompatActivity {
         }
         return null;
     }
+
+
     private static Socket Socket;
     private static PrintWriter printWriter;
     String message="";
-    private static String ip= "192.168.1.103";
+    private static String IP= "192.168.1.103";
+    private static int PORT= 8888;
 
     class myTask extends AsyncTask<Void,Void,Void>{
 
         @Override
         protected Void doInBackground(Void... params) {
             try {
-                Socket= new Socket(ip,8888);
+                Socket= new Socket(IP,PORT);
                 printWriter= new PrintWriter(Socket.getOutputStream());
+                //
+
+
+                /*
+                File myFile = new File (ScreenshotFilePath);
+                byte [] myByteArray  = new byte [(int)myFile.length()];
+                FileInputStream fileInputStream = new FileInputStream(myFile);;
+                BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream);
+                bufferedInputStream.read(myByteArray,0,myByteArray.length);
+                OutputStream outputStream = Socket.getOutputStream();
+                outputStream.write(myByteArray,0,myByteArray.length);
+                outputStream.flush();
+
+
+                if (bufferedInputStream != null) bufferedInputStream.close();
+                if (outputStream != null) outputStream.close();
+                if (Socket!=null) Socket.close();
+                */
+
+                //
                 printWriter.write(message);
                 printWriter.flush();
                 printWriter.close();
@@ -157,37 +194,65 @@ public class MainActivity extends AppCompatActivity {
     }
     private void sendScreenshot(){
 
-        message="Android";
 
+        setIpAndPort();
+        Socket sock = null;
+        try {
+            sock = new Socket(IP, PORT);
+        } catch (IOException e) {
+            ResponseFromRequestTextView.setText(e.toString());
+            e.printStackTrace();
+        }
+        byte[] mybytearray = new byte[1024];
+        InputStream is = null;
+        try {
+            is = sock.getInputStream();
+        } catch (IOException e) {
+            ResponseFromRequestTextView.setText(e.toString());
+            e.printStackTrace();
+        }
+        FileOutputStream fos = null;
+        try {
+            fos = new FileOutputStream(ScreenshotFilePath);
+        } catch (FileNotFoundException e) {
+            ResponseFromRequestTextView.setText(e.toString());
+            e.printStackTrace();
+        }
+        BufferedOutputStream bos = new BufferedOutputStream(fos);
+        int bytesRead = 0;
+        try {
+            bytesRead = is.read(mybytearray, 0, mybytearray.length);
+        } catch (IOException e) {
+            ResponseFromRequestTextView.setText(e.toString());
+            e.printStackTrace();
+        }
+        try {
+            bos.write(mybytearray, 0, bytesRead);
+        } catch (IOException e) {
+            ResponseFromRequestTextView.setText(e.toString());
+            e.printStackTrace();
+        }
+        try {
+            bos.close();
+        } catch (IOException e) {
+            ResponseFromRequestTextView.setText(e.toString());
+            e.printStackTrace();
+        }
+        try {
+            sock.close();
+        } catch (IOException e) {
+            ResponseFromRequestTextView.setText(e.toString());
+            e.printStackTrace();
+        }
+
+
+
+        /*
+        message="Android";
         message=imageFile.toString();
         myTask myTask= new myTask();
         myTask.execute();
-/*
-        String url;
-        String imagePath;
-        Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        IPEndPoint iPEnd = new IPEndPoint(IPAddress.Parse("192.168.1.103"), 8888);
-        socket.Connect(iPEnd);
-
-        String message;
-        do
-        {
-            message = "Android";
-            try
-            {
-                socket.Send(System.Text.Encoding.UTF8.GetBytes(message));
-
-                byte[] piggybackData = new byte[2];
-                socket.Receive(piggybackData);
-                String xxx=("Piggyback data :" + System.Text.Encoding.UTF8.GetString(piggybackData));
-            }
-            catch (Exception e)
-            {
-                String xxx=("Connection aborted. " + e.ToString());
-            }
-        } while (message.length() > 0);
-
-*/
+        */
     }
 
     private void openScreenshot(File imageFile) {
@@ -197,7 +262,7 @@ public class MainActivity extends AppCompatActivity {
         intent.setDataAndType(uri, "image/*");
         startActivity(intent);
     }
-    private void TakeScreen() {
+    private void TakeScreenViaHandler() {
         int i = 1;
         while (i < 5) {
             Handler handler = new Handler();
