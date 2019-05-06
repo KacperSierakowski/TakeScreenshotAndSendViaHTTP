@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">TakeScreenshotAndSendViaHTTP</string>
+    <string name="user_cancelled">User denied screen sharing permission</string>
 </resources>
