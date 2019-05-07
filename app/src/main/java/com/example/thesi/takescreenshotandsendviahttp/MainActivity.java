@@ -207,6 +207,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void stopScreenCapture() {
+        IsSendingEnabled = false;
         if (mVirtualDisplay == null) {
             return;
         }
