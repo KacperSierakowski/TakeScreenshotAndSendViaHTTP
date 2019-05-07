@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.Matrix;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.hardware.display.DisplayManager;
@@ -263,11 +264,26 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void sendScreenshot(Bitmap screenshot){
+        screenshot = getResizedBitmap(screenshot, screenshot.getHeight()/2, screenshot.getWidth()/2);
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        screenshot.compress(Bitmap.CompressFormat.JPEG, 5, byteArrayOutputStream);
+        screenshot.compress(Bitmap.CompressFormat.JPEG, 50, byteArrayOutputStream);
         byte[] byteArray = byteArrayOutputStream.toByteArray();
         String encoded = Base64.encodeToString(byteArray, Base64.DEFAULT);
         UDPClient.writeToSocket(getIpAddress() + "#" + encoded);
+    }
+
+    public Bitmap getResizedBitmap(Bitmap bm, int newHeight, int newWidth) {
+        int width = bm.getWidth();
+        int height = bm.getHeight();
+        float scaleWidth = ((float) newWidth) / width;
+        float scaleHeight = ((float) newHeight) / height;
+        // create a matrix for the manipulation
+        Matrix matrix = new Matrix();
+        // resize the bit map
+        matrix.postScale(scaleWidth, scaleHeight);
+        // recreate the new Bitmap
+        Bitmap resizedBitmap = Bitmap.createBitmap(bm, 0, 0, width, height, matrix, false);
+        return resizedBitmap;
     }
 
     private String getIpAddress()
